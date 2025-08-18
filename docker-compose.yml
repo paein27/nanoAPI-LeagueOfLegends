@@ -1,0 +1,61 @@
+version: "3.9"
+
+services:
+  service1:
+    build: ./services/service1
+    container_name: service1
+    ports: ["8000:8000"]
+    networks: [stack]
+
+  # ... (service2, loki, promtail, grafana, etc.)
+
+
+  service2:
+    build: ./services/service2
+    container_name: service2
+    ports: ["8001:8000"]
+    labels:
+      com.docker.compose.service: "service2"
+    networks: [stack]
+
+  loki:
+    image: grafana/loki:2.9.8
+    container_name: loki
+    command: ["-config.file=/etc/loki/config.yml"]
+    volumes:
+      - ./observability/loki/config.yml:/etc/loki/config.yml:ro
+      - loki-data:/loki
+    ports: ["3100:3100"]
+    networks: [stack]
+
+  promtail:
+    image: grafana/promtail:2.9.8
+    container_name: promtail
+    command: ["-config.file=/etc/promtail/config.yml"]
+    volumes:
+      - ./observability/promtail/promtail-config.yml:/etc/promtail/config.yml:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro   # <-- necesario
+      - /tmp:/tmp
+    depends_on: [loki]
+    networks: [stack]
+
+  grafana:
+    image: grafana/grafana:11.1.0
+    container_name: grafana
+    ports: ["3000:3000"]
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./observability/grafana/provisioning/:/etc/grafana/provisioning/
+    depends_on: [loki]
+    networks: [stack]
+
+volumes:
+  loki-data:
+  grafana-data:
+
+networks:
+  stack:
+    driver: bridge
