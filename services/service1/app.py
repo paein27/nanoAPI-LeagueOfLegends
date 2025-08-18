@@ -3,7 +3,6 @@ from typing import List, Optional
 from fastapi import FastAPI, Request, Response, HTTPException
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
-from pythonjsonlogger import jsonlogger
 
 # -------------------------
 # Logger JSON a stdout
@@ -13,9 +12,6 @@ SERVICE_NAME = "service1"
 logger = logging.getLogger(SERVICE_NAME)
 logger.setLevel(logging.INFO)
 handler = logging.StreamHandler()
-handler.setFormatter(jsonlogger.JsonFormatter(
-    "%(asctime)s %(levelname)s %(name)s %(message)s %(service)s %(request_id)s %(path)s %(method)s %(status_code)s %(elapsed_ms)s"
-))
 logger.handlers = [handler]
 logger.propagate = False
 
@@ -97,10 +93,6 @@ async def log_requests(request: Request, call_next):
 # -------------------------
 # Endpoints
 # -------------------------
-@app.get("/health")
-def health():
-    logger.info("health_ok", extra={"service": SERVICE_NAME})
-    return {"status": "ok", "service": SERVICE_NAME}
 
 @app.get("/champions", response_model=List[Champion])
 def list_champions(role: Optional[str] = None, q: Optional[str] = None, limit: int = 100, offset: int = 0):
@@ -119,12 +111,3 @@ def list_champions(role: Optional[str] = None, q: Optional[str] = None, limit: i
     result = data[offset: offset + max(0, min(limit, 200))]
     logger.info("champions_listed", extra={"service": SERVICE_NAME, "count": len(result), "role": role, "q": q})
     return result
-
-@app.get("/champions/{slug}", response_model=Champion)
-def get_champion(slug: str):
-    for c in CHAMPIONS:
-        if c.slug == slug.lower():
-            logger.info("champion_found", extra={"service": SERVICE_NAME, "slug": slug})
-            return c
-    logger.info("champion_not_found", extra={"service": SERVICE_NAME, "slug": slug})
-    raise HTTPException(status_code=404, detail="champion_not_found")
