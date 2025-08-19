@@ -5,17 +5,11 @@ services:
     build: ./services/service1
     container_name: service1
     ports: ["8000:8000"]
-    networks: [stack]
-
-  # ... (service2, loki, promtail, grafana, etc.)
-
 
   service2:
     build: ./services/service2
     container_name: service2
     ports: ["8001:8000"]
-    labels:
-      com.docker.compose.service: "service2"
     networks: [stack]
 
   loki:
